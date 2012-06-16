@@ -1,0 +1,7 @@
+# build artifacts
+/build/
+/GNUmakefile
+
+# tool artifacts
+*.pyc
+*.pyo

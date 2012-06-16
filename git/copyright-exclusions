@@ -1,0 +1,17 @@
+# Every line of this file is the name of a file with a legitimate reason
+# to not have a copyright notice. Comments and blank lines are not special,
+# but since a filename can't contain funky characters by this point ...
+
+.gitignore
+git/copyright-exclusions
+
+tpl/.gitignore
+tpl/conf.example
+tpl/gpl
+tpl/template.cpp
+tpl/template.fwd
+tpl/template.hpp
+tpl/template.make
+tpl/template.py
+tpl/template.sh
+tpl/template.tcc

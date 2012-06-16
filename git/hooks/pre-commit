@@ -1,0 +1,68 @@
+#!/bin/bash -e
+##    pre-commit - Check sanity before committing.
+##
+##    Copyright © 2012 Ben Longbons <b.r.longbons@gmail.com>
+##
+##    This file is part of The Mana World (Athena server)
+##
+##    This program is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License as published by
+##    the Free Software Foundation, either version 3 of the License, or
+##    (at your option) any later version.
+##
+##    This program is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This is based somewhat on the pre-commit.sample script
+
+# This script takes no arguments and nothing on standard input
+
+EXIT=0
+
+if test -n "$(git diff --cached --name-only --diff-filter=A -z | LC_ALL=C tr -d -- '-./0-9A-Z_a-z\0')"
+then
+    echo "Bad filename characters" >&2
+    exit 1 # This is fatal so bad characters don't screw up the rest
+fi
+
+# If there are whitespace errors, print the offending file names and fail.
+git diff --check --cached || EXIT=1
+
+# Check for copyright notices
+REGEX='Copyright.*'$(date +%Y)'.*'"$(git config user.name)"
+# Only check modified files for the current year and user
+FILES=$(git diff --cached --name-only)
+git grep --cached -L "$REGEX" -- $FILES | python -c '
+# -*- encoding: utf-8 -*-
+
+# No single quotes in here!
+from __future__ import print_function, division
+
+import sys
+
+# Note: using a literal exclusion list, so I do not put many entries in.
+
+# Python, have I ever told you how I love you?
+suppressions = set(open("git/copyright-exclusions"))
+
+def my_filter(offender):
+    return offender not in suppressions
+
+# Note: both suppressions and offenders have trailing newlines.
+offenders = filter(my_filter, sys.stdin)
+
+if offenders:
+    sys.stderr.write("Missing copyright notices in some files:\n")
+    for offender in offenders:
+        sys.stderr.write(offender)
+
+sys.exit(bool(offenders))
+' || EXIT=1
+
+
+exit $EXIT

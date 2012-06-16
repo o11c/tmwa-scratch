@@ -1,0 +1,16 @@
+#ifndef {upper:{initials:{project_name}}_{module}_{identifier:{filename}}}
+#define {upper:{initials:{project_name}}_{module}_{identifier:{filename}}}
+//    {filename} - forward declarations of classes in {root}.hpp
+//
+{prepend://
+{reparse:{include:{conf_dir}/{license}}}}
+
+namespace {lower:{initials:{project_name}}}
+{{
+namespace {module}
+{{
+
+}} // namespace {module}
+}} // namespace {lower:{initials:{project_name}}}
+
+#endif //{upper:{initials:{project_name}}_{module}_{identifier:{filename}}}

@@ -1,0 +1,20 @@
+## Note, this file may be sourced from multiple languages. Keep it simple!
+## In particular:
+## * Literals only, and no funky characters
+## * No spaces around =
+## * Strings in "" or ''; integers not
+## * integers in base 10 with no leading 0s
+
+# User settings
+
+# This should match git config user.name and user.email
+user_name="Ben Longbons"
+user_email='b.r.longbons@gmail.com'
+
+# Project settings
+
+# matches a filename (Not yet implemented, but feasible)
+license="gpl"
+
+# Note: capital letters in this are used to generate initials
+project_name="The Mana World (Athena server)"
