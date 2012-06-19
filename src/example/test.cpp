@@ -1,5 +1,4 @@
-#include "hello.hpp"
-//    hello.cpp - Print "hello, world!"
+//    test.cpp - Demonstrate what the test framework does and does not do.
 //
 //    Copyright © 2012 Ben Longbons <b.r.longbons@gmail.com>
 //
@@ -18,18 +17,7 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
-#include "tmwa/example.hpp"
-
-namespace tmwa
+int main()
 {
-namespace example
-{
-
-void Hello::say_hi()
-{
-    std::cout << get_hello() << std::endl;
+    return 1;
 }
-
-} // namespace example
-} // namespace tmwa

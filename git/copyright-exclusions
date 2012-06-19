@@ -5,6 +5,7 @@
 .gitignore
 git/copyright-exclusions
 
+# Templates that have placeholders for copyrights
 tpl/.gitignore
 tpl/conf.example
 tpl/gpl
@@ -15,3 +16,7 @@ tpl/template.make
 tpl/template.py
 tpl/template.sh
 tpl/template.tcc
+
+# trivial
+src/GNUmakefile
+src/subdir.make

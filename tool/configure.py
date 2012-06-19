@@ -26,6 +26,7 @@ import sys
 import os
 import subprocess
 from collections import OrderedDict
+from pipes import quote
 
 # If you're porting this configure script for another project,
 # here's a list of things you probably need to change:
@@ -48,6 +49,20 @@ def symlink(target, name):
         os.symlink(target, name)
 # function symlink
 
+def mkdir(path):
+    os.path.exists(path) or os.mkdir(path)
+# function mkdir
+
+def fix_path(path):
+    "Canonicalize a pathname."
+    if (path.startswith('/')):
+        return os.path.abspath(path)
+    path = os.path.relpath(path)
+    if not '/' in path:
+        path = os.path.join('.', path)
+    return path
+# function fix_path
+
 def tablify(list_of_lists):
     lengths = []
     for lst in list_of_lists:
@@ -66,6 +81,14 @@ def tablify(list_of_lists):
         yield ' '.join(line)
     # for lst
 # function tablify
+
+def which(progname):
+    assert '/' not in progname
+    for path_elem in os.getenv('PATH').split(':'):
+        candidate = os.path.join(path_elem, progname)
+        if os.access(candidate, os.X_OK):
+            return candidate
+    return None
 
 def parse_bool(s):
     if s == 'yes':
@@ -89,8 +112,8 @@ class Main(object):
         '_compiler_and_flags', '_sloppy')
 
     aliases = OrderedDict([
-        ('--dev', ['--clang', '--enable-warnings']),
-        ('--clang', ['CXX=clang++']),
+        ('--dev', ['--clang', '--enable-warnings']), #'--use-assembly']),
+        ('--clang', ['CXX=clang++', '--use-lto', '--use-gold']),
         ('--home', ['--prefix='+(os.getenv('HOME') or die("$HOME not set!"))]),
     ])
 
@@ -138,8 +161,10 @@ class Main(object):
     ])
     # --use-
     all_options = OrderedDict([
-        ('lto',         "Enable link-time optimization."),
-        ('assembly',    "Generate .s files instead of .o files.")
+        ('lto',         "Enable link-time optimization (only with clang)."),
+        # Disabled because it fails in conjunction with lto
+#        ('assembly',    "Use .s files instead of .o files for intermediates."),
+        ('gold',        "Force building with gold, even if system ld is not.")
     ])
 
     all_vars = OrderedDict([
@@ -287,10 +312,13 @@ class Main(object):
     # method parse
 
     def __init__(self, argv):
+        if '/' not in argv[0]:
+            die("/ not in argv[0] - don't put this in your $PATH")
         if '--help' in argv:
             self.help()
             sys.exit(0)
 
+        argv[0] = fix_path(argv[0])
         root, base = os.path.split(argv[0])
 
         if base != 'configure':
@@ -298,12 +326,14 @@ class Main(object):
 
         if root == '.':
             print("Redirecting './' to 'build/'.")
-            os.path.isdir('build') or os.mkdir('build')
+            mkdir('build')
             with open('GNUmakefile', 'w') as mf:
                 mf.write('.DEFAULT_GOAL = default\n')
                 mf.write('%:: ; ${MAKE} -C build $@\n')
             os.chdir('build')
             root = '..'
+            # needed for config.status to work
+            argv[0] = '../configure'
 
         print("Assuming the build environment is sane.")
         self.general = {}
@@ -314,12 +344,13 @@ class Main(object):
         self.vars = {}
         self._sloppy = False
 
-        symlink(os.path.join(root, 'src'), 'src')
-        symlink(os.path.join(root, 'include'), 'include')
-
-        # first, record all the variables
+        # Note: only validates and records.
         for arg in argv[1:]:
             self.parse(arg)
+
+        # post-validation, but before tested information
+        for dir in ['src', 'include', 'data', 'etc']:
+            symlink(os.path.join(root, dir), dir)
 
         ## First build/host and then vars, because they are essential
 
@@ -349,14 +380,16 @@ class Main(object):
         build_conf.append('CPPFLAGS := '+CPPFLAGS)
         CXXFLAGS = self.vars.get('CXXFLAGS') or '-g -O2 -pipe'
         build_conf.append('CXXFLAGS := '+CXXFLAGS)
-        LDFLAGS = self.vars.get('LDFLAGS') or ''
+        LDFLAGS = self.vars.get('LDFLAGS') or '-pipe'
         build_conf.append('LDFLAGS := '+LDFLAGS)
         LIBS = self.vars.get('LIBS') or ''
         build_conf.append('LIBS := '+LIBS)
 
         # for use with the try_compile function
         # lets hope that *FLAGS don't contain a "
-        self._compiler_and_flags = [CXX] + CPPFLAGS.split() + CXXFLAGS.split()
+        self._compiler_and_flags = [CXX] + CPPFLAGS.split() + ['-iquote', 'include'] + CXXFLAGS.split()
+
+        build_conf.append('override CPPFLAGS += -iquote include')
 
         for cxx11_flag in ['-std=c++11', '-std=c++0x']:
             if self.try_compile(
@@ -379,8 +412,7 @@ static_assert(get_true(), "This message cannot happen.");
         if boost in ['yes', 'no']:
             die('--with-boost= is not a boolean option!')
         if boost:
-            self._compiler_and_flags.append('-I')
-            self._compiler_and_flags.append(boost)
+            self._compiler_and_flags.extend(['-I', boost])
             build_conf.append('override CPPFLAGS += -I ' + boost)
         self.try_compile('#include <boost/multi_index_container_fwd.hpp>') or die('boost not found!')
 
@@ -394,23 +426,42 @@ static_assert(get_true(), "This message cannot happen.");
         # if nls
         warnings = self.features.get('warnings')
         if warnings and parse_bool(warnings):
+            self._compiler_and_flags.extend(['-include', 'tmwa/warnings.hpp'])
             build_conf.append('override CPPFLAGS += -include tmwa/warnings.hpp')
         # if warnings
 
         ## Then almost-finally build-options
         lto = self.options.get('lto')
         if lto and parse_bool(lto):
+            self._compiler_and_flags.append('-flto')
             build_conf.append('override CXXFLAGS += -flto')
             build_conf.append('override LDFLAGS += -flto')
         # if lto
 
+        # Might be forcibly disabled, see above
         assembly = self.options.get('assembly')
-        if assembly:
-            if parse_bool(assembly):
-                pass
-            print("Note, option 'assembly' isn't actually implemented yet.")
+        if assembly and parse_bool(assembly):
+            build_conf.append('intermediate := s')
+        else:
+            build_conf.append('intermediate := o')
         # if assembly
 
+        gold = self.options.get('gold')
+        if gold and parse_bool(gold):
+            print('Digging for gold ... ', end='')
+            mkdir('gold-hack')
+            for gold_binary in [host + '-ld.gold', 'ld.gold', 'gold']:
+                target_binary = which(gold_binary)
+                if target_binary:
+                    print('found ' + target_binary)
+                    symlink(target_binary, 'gold-hack/ld')
+                    break
+            else:
+                die('no gold found!')
+            self._compiler_and_flags.extend(['-B', 'gold-hack'])
+            build_conf.append('override LDFLAGS += -B gold-hack')
+        # if gold
+        self.try_link("int main(){}") or die('Unable to produce executables')
 
         ## Now finally (for real), the install dirs
         # These lines will be written to install.conf
@@ -483,19 +534,12 @@ static_assert(get_true(), "This message cannot happen.");
             mf.write('Makefile: ;\n')
 
         with open('config.status', 'w') as status:
-            status.write(
-"""#!/usr/bin/env python
-from __future__ import print_function, division
-import sys
-import os
-if len(sys.argv) != 1:
-    print('This script takes no arguments')
-    print('It just calls configure again with remembered arguments')
-else:
-    os.execv(%r, %r)
-# TODO: handle being in a different directory
-""" % (argv[0], argv)
-            )
+            status.write('#!/bin/sh\n')
+            quoted_argv = ' '.join(quote(arg) for arg in argv)
+            if argv[0].startswith('/'):
+                status.write('exec %s "$@"' % quoted_argv)
+            else:
+                status.write('exec $(dirname "$0")/%s "$@"' % quoted_argv)
         os.chmod('config.status', os.stat('config.status').st_mode | 0111)
 
         print('Everything is Ok.')
@@ -504,6 +548,15 @@ else:
     def try_compile(self, prog, extra_flags=[]):
         process = subprocess.Popen(
             self._compiler_and_flags + extra_flags + ['-x', 'c++', '-', '-fsyntax-only'],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None
+        ) # stdout discarded, stderr not redirected
+        process.communicate(prog)
+        return not process.returncode
+    # method try_compile
+
+    def try_link(self, prog, extra_flags=[]):
+        process = subprocess.Popen(
+            self._compiler_and_flags + extra_flags + ['-x', 'c++', '-', '-o', '/dev/null'],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None
         ) # stdout discarded, stderr not redirected
         process.communicate(prog)

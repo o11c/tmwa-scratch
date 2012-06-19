@@ -1,5 +1,5 @@
-#include "hello.hpp"
-//    hello.cpp - Print "hello, world!"
+#include "tmwa/example.hpp"
+//    lib.cpp - Example of "library" calls
 //
 //    Copyright © 2012 Ben Longbons <b.r.longbons@gmail.com>
 //
@@ -18,18 +18,13 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
-#include "tmwa/example.hpp"
-
 namespace tmwa
 {
 namespace example
 {
-
-void Hello::say_hi()
-{
-    std::cout << get_hello() << std::endl;
-}
-
+    std::string get_hello()
+    {
+        return "Hello, World!";
+    }
 } // namespace example
 } // namespace tmwa
