@@ -1,0 +1,18 @@
+Useful targets of the one makefile:
+
+default
+all
+install
+clean
+help
+----
+Variables normally set by configure can be overridden:
+make CXXFLAGS=-g\ -O0
+debug=nonempty-string will spit out a little bit of useless information
+
+Less useful targets:
+%.d, %.o, %.s %.ii
+bin/%, bin/%-test, lib/%.a
+%/objects, %/asms, %/mains, %/tests, %/libs
+%/bins, %/default, %/all; %/main, %/test, %/lib
+none, objects, asms, mains, tests, libs, bins,

@@ -20,3 +20,11 @@ tpl/template.tcc
 # trivial
 src/GNUmakefile
 src/subdir.make
+
+# Documentation that shouldn't be cluttered
+COPYING
+README
+src/make.help
+
+# Special
+gpl.txt

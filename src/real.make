@@ -64,7 +64,7 @@ include install.conf
 
 ###############################################################################
 
-## Preferred usage: mkdir build; cd build; touch conf.make; make -rRf ../src/real.make
+## Preferred usage: don't call this directly, use the configure script!
 
 # This is the real makefile, called with -f from the build dir.
 # Important note: the build dir is not the current directory.
@@ -224,3 +224,6 @@ install: # No deps - install whatever managed to get built
 #	install -t ${sysconfdir} <everything in etc/>
 clean:
 	rm -rf ${SUBDIRS} bin lib
+
+help:
+	less src/make.help

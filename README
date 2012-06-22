@@ -1,0 +1,52 @@
+For a more user-friendly introduction, see:
+http://wiki.themanaworld.org/index.php/How_to_Develop
+
+This is a technical README for my rewrite of The Mana World's Athena server,
+which remains fully compatible with the existing protocol and concepts,
+unlike ManaServ.
+
+This file contains some notes on the path layout and build system.
+
+How to build and install:
+./configure             possibly with some options, try: ./configure --help
+make                    probably with no options, but see: make help
+sudo make install       or checkinstall; try also DESTDIR=
+
+This is not GNU's configure, which checks for a million cases that
+probably won't happen in the real world, and can't fix them anyway.
+
+Overview of files:
+
+git/                    information used in the versioning system
+git/hooks/              hooks, to be symlinked from .git/hooks/
+git/copyright-exclude   a list of files that should not have copyright info
+src/                    root of program source files and build system
+src/<x>/                various source "modules", this is somewhat arbitrary.
+src/<x>/main.cpp        used to build bin/tmwa-<x>
+src/<x>/test.cpp        used to build bin/tmwa-<x>-test
+src/<x>/lib.cpp         used to build lib/<x>.a, see include/tmwa/<x>
+src/<x>/<abc>.hpp       automatic dependency on src/<x>/abc.cpp
+src/<x>/GNUmakefile     call make at the next level up, with <x> prepended
+src/GNUmakefile         call make in the build dir instead, for convenience
+src/real.make:          the One Makefile that builds them all
+include/twma/<x>.hpp    automatic dependency on src/<x>/lib.cpp (not lib/<x>.a)
+tool/                   various tools
+tpl/                    template system for creating new files
+etc/                    conf files for /etc/tmwa/
+data/                   readonly files for /usr/share/tmwa/
+
+
+Notes about linking:
+LTO is an awesome feature of either clang or gcc, but it sometimes fails.
+With clang, you need the gold linker (not necessarily as /usr/bin/ld)
+and /usr/lib/LLVM.so with the same version as clang.
+With gcc, last time I tried, it had problems when I needed to link with librt
+Granted, I haven't tried that recently, or with clang yet.
+If possible, try to link with librt statically, since we don't need pthreads.
+
+Notes about assembler:
+gcc and clang both have -fverbose-asm, does clang use it by default?
+gcc has -masm=intel to make things more readable
+But you should really just use clang -S -emit-llvm option (same as -flto)
+If you really want intel asm from clang, try:
+clang -S -emit-llvm <...>; llc -x86-asm-syntax=intel <...>

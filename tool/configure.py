@@ -130,6 +130,8 @@ class Main(object):
         ('sbin',        'system admin executables [EPREFIX/sbin]'),
         ('libexec',     'program executables [EPREFIX/libexec]'),
         ('sysconf',     'read-only single-machine data [PREFIX/etc]'),
+        # I added this one because it's useful
+        ('pkgconf',     'config files for this package [SYSCONFDIR/%s]' % package),
         ('sharedstate', 'modifiable architecture-independent data [PREFIX/com]'),
         ('localstate',  'modifiable single-machine data [PREFIX/var]'),
         ('lib',         'object code libraries [EPREFIX/lib]'),
@@ -474,6 +476,7 @@ static_assert(get_true(), "This message cannot happen.");
         sbindir =           self.dirs.get('sbin') or eprefix + '/sbin'
         libexecdir =        self.dirs.get('libexec') or eprefix + '/libexec'
         sysconfdir =        self.dirs.get('sysconf') or prefix + '/etc'
+        pkgconfdir =        self.dirs.get('pkgconf') or sysconfdir + '/' + package
         sharedstatedir =    self.dirs.get('sharedstate') or prefix + '/com'
         localstatedir =     self.dirs.get('localstate') or prefix + '/var'
         libdir =            self.dirs.get('lib') or prefix + '/lib'
